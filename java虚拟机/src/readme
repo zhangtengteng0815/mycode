@@ -1,0 +1,606 @@
+第一部分：走近java
+第一章：走近java
+	JDK包括：java程序设计语言、java虚拟机、java API类库
+	JRE包括：java SE API子集和java虚拟机
+	
+	按照重点业务领域划分：
+		java Card:支持一些java小程序（Applets）运行在小内存设备上的平台
+		java ME（Micro Edition）:支持java程序运行在移动端上的平台，对java API有所精简，并加入了针对移动终端的支持。
+		java SE（Standard Edition）:支持面向桌面级应用的java平台，提供完整的java核心API。
+		java EE（Enterprise Edition）:支持使用多层架构的企业应用的java平台，除了java SE API之外，还对其做了大量的扩充并提供了相关的部署支持。
+
+第二部分：自动内存管理机制		
+第二章：java内存区域与内存溢出异常
+	程序计数器：是当前线程所执行的字节码的行号指示器。
+			在虚拟机的概念模型里，字节码解释器的工作就是通过改变这个计数器的值来选取下一条需要执行的字节码指令，
+			分支、循环、跳转、异常处理、线程恢复等基础功能都需要依赖这个计数器来完成
+		
+			java虚拟机多线程通过线程轮流切换并分配处理器执行时间的方式来实现。
+			为了线程切换后能恢复到正确的执行位置，每条线程都需要有一个独立的程序计数器。
+			
+			如果线程正在执行的是一个java方法，这个计数器记录的是正在执行的虚拟机字节码的地址
+			如果正在执行的是native方法，这个计数器值则为空，此内存区域是唯一一个在java虚拟机规范中没有规定任何OutOfMemoryError情况的区域。
+	java虚拟机栈：也是线程私有的，生命周期与线程相同。
+			虚拟机栈描述的是java方法执行的内存模型：每个方法被执行的时候都会同时创建一个栈帧（stack frame）用于存储局部变量表、操作栈、动态链接、方法出口等信息。
+			每一个方法被调用直至执行完成的过程，就对应一个栈帧在虚拟机栈中从入栈到出栈的过程。
+	本地方法栈：虚拟机栈为虚拟机执行java方法服务，而本地方法栈则为虚拟机使用到的native方法服务。	
+	java堆：被所有线程共享的一块区域，在虚拟机启动时创建。目的：存放对象实例。
+			java堆可以分为：新生代和老年代；再细一点有Eden区，From Survivor空间、To Survivor空间等。
+	方法区（Method Area）：和java堆一样，是各个线程共享的内存区域，	它用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译编译后的代码等数据。	
+			垃圾收集行为在这个区域是比较少出现的。这个区域内存回收目标主要是针对常量池的回收和对类型的卸载。
+			
+			运行时常量池：是方法区的一部分。class文件中除了有类的版本、字段、方法、接口等描述信息外，还有一项信息是常量池。
+					常量池用于存放编译期生成的各种字面量和符号引用。这部分内容将在类加载后存放到方法区的运行时常量池中。
+	直接内存：并不是虚拟机运行时数据区的一部分，也不是java虚拟机规范中定义的内存区域。
+	对象访问：主流的访问方式有：使用句柄和直接指针。
+			使用句柄访问方式：java堆中会划分出一块内存来作为句柄池，reference中存储的就是对象的句柄地址，而句柄中包含了实例数据和类型数据各自的具体地址信息。
+			直接指针访问方式：java堆对象的布局中就必须考虑如何放置访问类型数据的相关信息，reference中直接存储的就是对象地址。
+	
+	-Xms -Xmx 	设置堆
+	-Xoss		设置本地方法栈
+	-Xss		设置栈
+	-XX:PermSize -XX:MaxPermSize 设置方法区大小
+	-XX:MaxDirectMemorySize	 本机直接内存，如果不指定，则默认与java堆最大值一样（-Xmx）
+	
+	如果线程请求的栈深度大于虚拟机所允许的最大深度，将抛出StackOverflowError
+	如果虚拟机在扩展栈时无法申请到足够的内存空间，则抛出OutOfMemoryError
+第三章：垃圾收集器与内存分配策略		
+	对象已死？
+		1.引用计数算法--给对象中添加一个引用计数器，每当有一个地方引用它时，计数器的值就加一；
+					当引用失效时，计数器就减一；任何时刻计数器都为0的对象就是不可能再被使用的。
+				--它很难解决对象之间的相互循环引用的问题
+		2.根搜索算法--通过一系列的名为“GC Roots”的对象作为起始点，从这些节点开始向下搜索，搜索所走过的路径称为引用链（Reference Chain），
+					当一个对象到GC Roots没有任何引用链相连（从GC Roots到这个对象不可达）时，则证明此对象是不可用的。
+					--GC Roots对象包括
+						1.虚拟机栈（栈帧中的本地变量表）中的引用的对象
+						2.方法区中的类静态属性引用的对象
+						3.方法区中的常量引用的对象
+						4.本地方法栈中JNI（即一般说的Native方法）的引用的对象
+	引用
+		强引用（strong reference）--指在程序代码中普遍存在的，类似Object obj=new Object()这种类的引用，
+								只要强引用还存在，垃圾收集器永远不会回收掉被引用的对象。
+		软引用（soft reference）--用来描述一些还有用的，但并非必须的对象。对于软引用关联着的对象，在系统将要发生内存溢出异常之前，
+								将会把这些对象列进回收范围之中并进行第二次回收。如果这次回收还是没有足够的内存，才会抛出内存溢出异常。
+		弱引用（weak reference）--也是用来描述非必须对象的，但是它的强度比软引用更弱一些，被弱引用关联的对象只能生存到下一次垃圾收集发生之前。
+								当垃圾收集器工作时，无论当前内存是否足够，都会回收掉只被弱引用关联的对象。
+		虚引用（phantom reference）--称为幽灵引用或者幻影引用，它是最弱的一种引用关系。一个对象是否有虚引用的存在，完全不会对其生存时间构成影响，
+								也无法通过虚引用来取得一个对象实例。为一个对象设置虚引用关联的唯一目的就是希望能在这个对象被回收时收到一个系统通知。
+	生存还是死亡
+		当对象没有覆盖finalize()方法或者该方法已经被调用过，虚拟机将这两种情况视为“没有必要执行”。
+		如果该对象被判断为有必要执行finalize()方法，那么该对象会被放置在一个名为F-Queue的队列之中，并在一条由虚拟机自动建立的、低优先级的Finalizer线程去执行。
+		执行是指虚拟机有机会触发这个方法，但并不承诺会等待它运行结束。这是因为，如果一个对象在finalize方法中执行缓慢，或者发生死亡，将导致F-Queue队列其他对象永久处于等待状态。
+		任何一个对象的finalize()方法都只会被系统自动调用一次，如果对象面临下一次回收，它的finalize()方法不会被再次执行。
+		finalize()能做的所有工作，使用try-finally或者其他方式都可以做的更好、更及时。
+	回收方法区
+		永久代垃圾收集主要回收两部分内容：废弃常量和无用的类。
+		无用的类满足条件：
+			1.该类所有实例都已经被回收，也就是java堆中不存在该类的任何实例
+			2.加载该类的classloader已经被回收
+			3.该类对应的java.lang.Class对象没有在任何地方被引用，无法在任何地方通过反射访问该类的方法
+		在大量使用反射、动态代理、CGLib等bytecode框架的场景，以及动态生成JSP和OSGi这类频繁自定义classloader的场景都需要虚拟机具备类卸载的功能，以保证永久代不会溢出。
+	垃圾收集算法
+		标记-清除算法
+		复制算法--新生代使用算法
+			新生代将内存分为一块较大的Eden空间和两块较小的Survivor空间，每次使用Eden和其中一块Survivor。当回收时，
+			将Eden和Survivor中还存活的对象一次性地拷贝到另一块Survivor空间上，最后清理掉Eden和刚刚才用过的Survivor空间。
+		标记-整理算法--老年代使用的算法
+		分代收集算法
+			java堆分为新生代和老年代--这样就可以根据各个年代的特点采用最适当的收集算法。
+	垃圾收集器
+		Serial收集器：新生代--单线程--必须停止其他工作线程，直至它收集结束。
+			--XX:SurvivorRatio、--XX:PretenureSizeThreshold、--XX:HandlePromotionFailure
+		ParNew收集器：是Serial收集器的多线程版本
+			--XX:SurvivorRatio、--XX:PretenureSizeThreshold、--XX:HandlePromotionFailure
+		Parallel Scavenge收集器：新生代--使用复制算法--并行的多线程
+			目标：达到一个可控制的吞吐量。
+			--XX:MaxGCPauseMillis最大垃圾收集停顿时间、--XX:GCTimeRatio设置吞吐量大小
+			--XX:+UseAdaptiveSizePolicy开关参数，虚拟机根据当前系统运行情况收集性能监控信息，动态调整以提供最合适的停顿时间或吞吐量。
+		Serial Old收集器：是Serial收集器的老年代版本--单线程--标记-整理算法
+		Parallel Old收集器：Parallel Scavenge收集器的老年代版本--多线程--标记-整理算法
+		CMS(Concurrent Mark Sweep)收集器：是一种以获取最短回收停顿时间为目标的收集器--基于标记-清除算法实现的
+			过程：
+				1.初始标记（CMS initial mark）
+				2.并发标记（CMS concurrent mark）
+				3.重新标记（CMS remark）
+				4.并发标记（CMS concurrent mark）
+		G1收集器：基于标记-整理算法--非常精确的控制停顿
+			G1将整个堆（包括新生代和老年代）划分为多个大小固定的独立区域（region），并跟踪这些区域里面的垃圾堆积程度，在后台维护一个优先列表，
+			每次根据允许的收集时间，优先回收垃圾最多的区域（这就是garbage first名称的由来）。
+	内存分配和回收策略
+		对象优先在Eden分配
+			--XX:+PrintGCDetails收集器日志参数
+			新生代GC（Minor GC）:指发生在新生代的垃圾收集动作，因为java对象大多数都具备朝生夕灭的特性，所以Minor GC非常频繁，一般回收速度也比较快。
+			老年代GC（Major GC/Full GC）:指发生在老年代GC.
+		大对象直接进入老年代
+			--XX:PretenureSizeThreshold大于这个设置值的对象直接在老年代中分配
+		长期存活的对象将进入老年代
+			对象年龄（Age）计数器--在熬过一次Minor GC后，年龄加1，当年龄增加到一定程度（默认为15岁）时，就会被晋升到老年代中。--XX:MaxTenuringThreshold设置晋升老年代年龄阈值。
+		动态对象年龄判定
+			如果survivor空间中相同年龄所有对象大小的总和大于survivor空间的一半，年龄大于或等于该年龄的对象就可以直接进入老年代。
+		空间分配担保
+			在发生Minor GC时，虚拟机会检测之前每次晋升到老年代的平均大小是否大于老年代的剩余空间大小，如果大于，则改为直接进行一次Full GC，
+			如果小于，则查看HandlePromotionFailure设置是否允许担保失败；如果允许，那只会进行Minor GC；如果不允许，则也要进行一次Full GC。
+第四章：虚拟机性能监控与故障处理
+	jdk工具它们的主要功能代码是在tools类库中实现的--jdk\lib\tools.jar
+	
+		jps:虚拟机进程状况工具（JVM Process Status Tool）
+			列出正在运行的虚拟机进程，并显示虚拟机执行主类（main函数）的名称，以及这些进程的本地虚拟机的唯一ID。
+			jps [options] [hostid]
+		jstat:虚拟机统计信息监视工具（JVM statistics monitoring tool）
+			监视虚拟机各种运行状态信息的命令行工具。可以显示本地或者远程虚拟机进程中的类装载、内存、垃圾收集、JIT编译等运行数据。
+			jstat [option vmid [interval [s|ms] [count]]]
+		jinfo:java配置信息工具（configuration info for java）
+			实施查看和调整虚拟机的各项参数。
+			jinfo [option] pid
+				-flag <name>         to print the value of the named VM flag
+	 			-flag [+|-]<name>    to enable or disable the named VM flag
+				-flag <name>=<value> to set the named VM flag to the given value
+	 			-flags               to print VM flags
+	 			-sysprops            to print Java system properties
+	 			<no option>          to print both of the above
+	 			-h | -help           to print this help message
+	 	jmap:java内存映像工具（memory map for java）
+	 		用于生成堆转储快照（一般称为heapdump或者dump文件）
+	 		-XX:+HeapDumpOnOutOfMemoryError 可以让虚拟机在OOM异常出现之后自动生成dump文件
+	 		-XX:+HeapDumpOnCtrlBreak 可以使用[Ctrl]+[Break]键让虚拟机生成dump文件
+	 		还何以查询finalize执行队列，java堆和永久代的详细信息，如空间使用率、当前用的是哪种收集器等。
+	 		jmap命令格式
+	 			jmap [option] vmid
+	 	jhat:虚拟机堆转储快照分析工具（jvm heap analysis tool）
+	 		与jmap搭配使用，来分析jmap生成的堆转储快照	
+		jstack:java堆栈跟踪工具（stack trance for java）
+			用于生成虚拟机当前时刻的线程快照（一般称为threaddump或者javacore文件）
+			线程快照就是当前虚拟机内每一条线程正在执行的方法堆栈的集合。--目的:定位线程出现长时间停顿的原因
+			jstack命令格式
+				jstack [option] vmid
+			java.lang.thread类新增了一个getAllStackTraces()方法用于获取虚拟机中所有线程的StackTraceElement对象
+	JDK可视化工具
+		JConsole:java监视与管理控制台（java monitoring and management console）
+			：一款基于JMX的可视化监视和管理工具。
+		VisualVM:多合一故障处理工具（All-In-One java troubleshooting tool）
+			除了运行监视、故障处理外，还提供其他方面功能，如性能分析（profiling）等。	
+			VisualVM兼容范围：
+				1.显示虚拟机进程及进程的配置和环境信息（jps、jinfo）。
+				2.监视应用程序的CPU、GC、堆、方法区及线程的信息（jstat、jstack）。
+				3.dump及分析堆转储快照（jmap、jhat）。
+				4.方法级的程序运行性能分析，找出被调用最多、运行时间最长的方法。
+				5.离线程序快照：收集程序的运行时配置、线程dump、内存dump等信息建立一个快照，可以将快照发送开发者处理Bug反馈。
+				6.其他plugin的无线可能。
+	故障处理工具
+		IBM的support assistant、heap analyzer、Javacore analyzer、garbage collector analyzer适用于IBM J9 VM。
+		HP的HPjmeter、HPjtune适用于HP-UX、SAP、HotSpot VM。
+		eclipse的memory analyzer tool适用于HP-UX、SAP、HotSpot VM，安装IBM DTFJ插件后支持IBM J9 VM。
+		BEA的JRockit	mission control，适用于 JRockit VM。
+第五章：调优案例分析与实战
+	
+第三部分：虚拟机执行子系统
+第六章：类文件结构
+		魔数：每个class文件的头4个字节称为魔数（magic number）
+			作用：用于确定这个文件是否为一个能被虚拟机接受的class文件
+			值：0xCAFEBABE(咖啡宝贝)
+		版本号：class文件版本号
+			第5第6个字节是次版本（minor version），第7和第8个字节是主版本（major version）
+			java版本号是从45开始的
+		常量池入口		
+			常量池之中主要存放两大类常量：字面量（literal）和符号引用（symbolic）
+			字面量比较接近于java语言层面的常量概念
+			符号引用包括下面三类常量：
+				1.类和接口的全限定名（fully qualified name）
+				2.字段的名称和描述符（descriptor）
+				3.方法的名称和描述符
+		访问标志：2个字节（access_flages）
+		类索引、父类索引和接口索引集合：用于确定这个类的继承关系
+			类索引：确定这个类的全限定名
+			父类索引：确定这个类的父类限定名
+			接口索引集合：描述这个类实现了那些接口
+		字段表集合（field_info）：用于描述接口或者类中声明的变量
+			全限定名：类的全名，如“com/zhangtengteng/clazz/TestClass”
+			简单名称：没有类型和参数修饰的方法或者字段名称
+		方法表集合
+			访问标志（access_flags）
+			名称索引（name_index）
+			描述符索引（descriptor_index）
+			属性表集合（attributes）
+		属性表集合
+			1.Code属性
+				字节码指令
+					在任何实例方法中，都可以通过this关键字访问到此方法所属的对象。这个访问机制对java程序的编写很重要，而它的实现却非常简单，仅仅通过javac
+					编译器在编译的时候把对this关键字的访问转变为对一个普通方法参数的访问，然后在虚拟机调用实例方法时自动传入此参数即可。因此在实例方法的局部变量表中
+					至少会存在一个指向当前对象实例的局部变量，局部变量表中也会预留出第一个slot位来存放对象实例的引用，方法参数值从1开始计算。
+				显示异常处理表集合
+			2.Exceptions属性
+			3.LineNumberTable属性
+				用于描述java源码行号与字节码行号之间的对应关系。
+				可以在javac中使用-g:none或者-g:lines选项来取消或要求生成这项信息。
+				如果选择不生成LineNumberTable属性，对程序运行产生的最重要的影响就是在抛出异常时，堆栈中将不会显示出错的行号，并在调试程序时，无法按照源码来设置断点。
+			4.LocalVariableTable属性
+				用于描述栈帧中局部变量表中的变量与java源码中定义的变量之间的关系。它不是运行时必须的属性，默认也不会生成到class文件之中，
+				可以在javac中使用-g:none或者-g:vars选项来取消或者要求生成这项信息。如果没有生成这项属性，最大的影响就是当其他人引用
+				这个方法时，所有的参数名称都将丢失，IDE可能会使用诸如arg0、arg1之类的占位符来代替原有的参数名，这对程序运行没有影响，
+				但会给代码编写带来较大的不便，而且在调试期间调试器无法根据参数名称从运行上下文中获得参数值。
+			5.SourceFile属性
+				用于记录生成这个class文件的源码文件名称。
+				可以在javac中使用-g:none或者-g:source选项来取消或要求生成这项信息。
+			6.ConstantValue属性
+				作用：通知虚拟机自动为静态变量赋值
+				只有被static关键字修饰的变量才可以使用这项属性
+				对于非static类型的变量的赋值是在实例构造器<init>方法中进行的。
+				对于类变量，有两种方式选择：
+					赋值在类构造器<clinit>方法中进行，或者使用ConstantValue属性赋值。
+			7.InnerClasses属性
+				用于记录内部类与宿主类之间的关联		
+			8.Deprecated及Synthetic属性
+				Deprecated属性用于表示某个类、字段或方法，已经被程序作者定为不再推荐使用，它可以通过在代码中使用@deprecated注解进行设置。
+				Synthetic属性代表此字段或方法并不是由java源码直接产生的，而是由编译器自行添加的。
+第七章：虚拟机类加载机制
+	1.类的生命周期
+		加载（loading）
+			（1）通过一个类的全限定名来获取定义此类的二进制字节流
+			（2）将这个字节流所代表的静态存储结构转化为方法区的运行时数据结构
+			（3）在java堆中生成一个代表这个类的java.lang.Class对象，作为方法区这些数据的访问入口
+			
+			获取方式：
+				从ZIP包中读取，这很常见，最终成为日后JAR、EAR、WAR格式的基础
+				从网络中获取，这种场景最典型的应用就是Applet
+				运行时计算生成，这种场景使用得最多的就是动态代理技术，在java.lang.reflect.Proxy。
+				由其他文件生成，典型场景：JSP应用。
+				从数据库中读取，这种场景相对少些，有些中间件服务器（如SAP Netweaver）可以选择把程序安装到数据库中来完成程序代码在集群间的分发。
+				
+		连接（linking）
+			验证（verification）
+			-Xverify:none参数来关闭大部分的类验证措施，以缩短虚拟机类加载的时间。
+				目的：为了确保class文件的字节流包含的信息符合当前虚拟机的要求，并且不会危害虚拟机自身的安全。
+				
+				1.文件格式验证
+					目的：保证输入的字节流能正确的解析并存储于方法区之内，格式上符合描述一个java类型信息的要求。
+				2.元数据验证
+					目的：是对字节码描述信息进行语义分析，以保证其描述的信息符合java语言规范的要求。
+				3.字节码验证
+					最复杂的一个阶段，主要工作是进行数据流和控制流分析。保证被校验类的方法在运行时不会做出危害虚拟机安全的行为。
+				4.符号引用验证
+					对自身以外（常量池中的各种符号引用）的信息进行匹配性的校验。
+					目的：确保解析动作能正常执行。
+			准备（preparation）
+				是正式为类变量分配内存并设置类变量初始值的阶段，这些内存都将在方法区中进行分配。
+			解析（resolution）
+				虚拟机将常量池内的符号引用替换为直接引用的过程。
+				符号引用（Symbolic References）：符号引用以一组符号来描述所引用的目标，符号可以是任何形式的字面量，
+					只要使用时能无歧义的定位到目标即可，符号引用与虚拟机实现的内存布局无关，引用的目标并不一定已经加载到内存中。
+				直接引用（Direct References）：直接引用可以是直接指向目标的指针、相对偏移量或是一个能间接定位到目标的句柄。
+					直接引用是与虚拟机实现的内存布局相关的，同一个符号引用在不同虚拟机实例上翻译出来的直接引用一般不会相同。
+					如果有了直接引用，那引用的目标必定已经在内存中存在。
+					
+				1.类或接口的解析
+				2.字段解析
+				3.类方法解析
+				4.接口方法解析
+		初始化（initialization）
+			四种情况下必须对类进行“初始化”（加载、验证、准备需要在此之前）：
+				（1）遇到new、读取或设置一个类的静态字段或者调用一个类的静态方法的时候。
+				（2）使用java.lang.reflect包的方法对类进行发射调用的时候。
+				（3）当初始化一个类的时候，如果发现其父类还没有进行过初始化，则需要先触发其父类的初始化
+				（4）当虚拟机启动时，用户需要指定一个要执行的主类（包含main()方法的那个类），虚拟机会先初始化这个主类
+			类加载过程的最后一步：初始化阶段是执行类构造器<clinit>()方法的过程。
+				1.<clinit>()方法是由编译器自动收集类中的所有类变量的赋值动作和静态语句块（static{}块）中的语句合并产生的，编译器收集顺序由语句在源文件中
+				出现的顺序决定。
+				2.<clinit>()方法执行前需要保证父类<clinit>()方法已经执行完毕，因此虚拟机中第一个被执行的<clinit>()方法类是java.lang.Object。
+				3.父类的静态语句块要优先于子类的变量赋值操作。
+				4.<clinit>()方法对于类或者接口来说并不是必须的，如果一个类中没有静态语句块，也没有对变量的赋值操作，那么编译器可以不为这个类生成<clinit>()方法。
+				5.接口与类不同，接口执行<clinit>()方法不需要先执行父接口的<clinit>()方法。
+				6.虚拟机会保证一个类的<clinit>()方法在多线程环境中被正确的加锁和同步。
+		使用（using）
+		卸载（unloading）
+	类加载器		
+		两个类是否“相等”，只有在同一个类加载器加载的前提下才有意义。否则，即使这两个类来源于同一个class文件，只要它们的类加载器不同，那么这两个类就必定不相等
+		“想等”代表类的equals()、isAssignableForm()、isInstance()、instanceof关键字
+		
+		*双亲委派模型*
+			在java虚拟机角度讲，只存在两种不同的类加载器
+				1.启动类加载器（Bootstrap ClassLoader）这个类加载器使用C++语言实现，是虚拟机的一部分。
+				2.所有其他类加载器，通过java语言实现，独立于虚拟机外部，继承自抽象类java.lang.ClassLoader。
+			从java开发人员角度
+				1.启动类加载器（Bootstrap ClassLoader）
+					负责将存放在<JAVA_HOME>\lib目录中的，或者被-Xbootclasspath参数所指定的路径中的，
+					并且是虚拟机识别的（如rt.jar,不符合的类库不加载）类库加载到虚拟机中，启动类加载器无法被java程序直接引用。
+				2.扩展类加载器（Extension ClassLoader）
+					这个类加载器由sun.misc.Launcher$ExtClassLoader来实现，它负责加载<JAVA_HOME>\lib\ext目录中的，
+					或者被java.ext.dirs系统变量所指定的路径中的所有类库，开发者可以直接使用扩展类加载器。
+				3.应用程序类加载器（Application ClassLoader）
+					这个类加载器由sun.misc.Launcher$AppClassLoader来实现，由于这个类加载器是ClassLoader中
+					getSystemClassLoader()方法的返回值，所以一般也称为系统类加载器。它负责加载用户类路径（classpath）上指定的类库。
+				双亲委派模型的工作过程：如果一个类加载器收到一个类加载的请求，它首先不会自己去尝试加载这个类，
+								而是把这个请求委派给父类加载器去完成，每一个层次的类加载器都是如此，
+								因此所有的加载请求最终都应该传送到顶层的启动类加载器中，
+								只有当父类加载器反馈自己无法完成这个加载请求时（它搜索范围中没有找到所需要的类），
+								子类加载器才会尝试自己去加载。				
+				破坏双亲委派模型
+					1.出现在双亲委派模型之前
+					2.基础类调用用户代码（如JNDI）--线程上下文类加载器（Thread Context ClassLoader）
+					3.程序动态性--代码热替换（HotSwap）、模块热部署（Hot Deployment）---OSGI
+第八章：虚拟机字节码执行引擎
+		物理机：物理机是直接建立在处理器、硬件、指令集和操作系统层面上的。
+		执行引擎在执行java代码的时候可能有解释执行（通过解释器执行）和编译执行（通过即时编译产生本地代码执行）两种选择。
+		
+		运行时栈帧结构
+			栈帧（Stack Frame）:是用于支持虚拟机进行方法调用和方法执行的数据结构，它是虚拟机运行时数据区中的虚拟机栈（virtual machine stack）的栈元素。
+			栈帧存储了方法的局部变量表、操作数栈、动态连接和方法返回地址等信息。每一个方法从调用开始到执行完成的过程，就对应着一个栈帧在虚拟机栈里面从入栈到出栈的过程。
+		方法调用
+			java虚拟机提供了四条方法调用字节码指令
+				invokestatic：调用静态方法
+				invokespecial：调用实例构造器<init>方法、私有方法和父方法
+				invokevirtual：调用所有的虚方法
+				invokeinterface：调用接口方法，会在运行时再确定一个实现接口的对象
+			
+			解析调用一定是个静态的过程，在编译期间就完全确定，在类装载的解析阶段就会把涉及的符号引用全部转变为可确定的直接引用，不会延迟到运行期再去完成。
+			而分派调用则可能是静态的也可能是动态的，根据分派依据的宗量数可分为单分派和多分派。
+				1.静态分派
+					Human man=new Man();
+					我们把上面代码中的“Human”称为变量的静态类型（static type）或者外观类型（apparent type），
+					后面的“Man”则称为变量的实际类型（actual type），静态类型和实际类型在程序中都可以发生一些变化，
+					区别是静态类型的变化仅仅在使用时发生，变量本身的静态类型则不会被改变，并且最终的静态类型是在编译期可知的；
+					而实际类型变化的结果在运行期才可确定，编译器在编译程序的时候并不知道一个对象的实际类型是什么。
+					
+					所有依赖静态类型来定位方法执行版本的分派动作，都称为静态分派。静态分派的最典型应用就是方法重载。
+				2.动态分派
+					invokevirtual指令执行的第一步就是在运行期确定接收者的实际类型，所以两次调用invokevirtual指令把常量池中的类方法符号
+					引用解析到了不同的直接引用上，这个过程就是java语言中方法重写的本质。我们把这种在运行期根据实际类型确定方法执行版本的分派过程称为动态分派。
+				3.单分派与多分派
+					方法的接受者与方法的参数统称为方法的宗量。
+					单分派是根据一个宗量对目标方法进行选择，多分派则是根据多于一个的宗量对目标方法进行选择。
+				4.虚拟机动态分派
+					虚方法表中存放着各个方法的实际入口地址。
+		基于栈的字节码解释引擎
+			解释执行
+				java语言中，javac编译器完成了程序代码经过词法分析、语法分析到抽象语法树，再遍历语法树生成线性的字节码指令流的过程。
+				因为这一部分动作是在java虚拟机之外进行的，而解释器在虚拟机的内部，所以java程序的编译就是半独立的实现。
+			基于栈的指令集与基于寄存器的指令集
+第九章：类加载及执行子系统的案例与实战
+	tomcat：正统的类加载器架构		
+	OSGi:灵活的类加载器架构
+	字节码生成技术与动态代理的实现	
+	Retrotranslator:跨越JDK版本--将jdk1.5版本的class文件转变为jdk1.4或1.3
+
+第四部分：程序编译与代码优化		
+第十章：早起（编译期）优化		
+	前端编译器（编译器的前端）：把*.java文件转变成*.class文件的过程。
+		sun的javac、eclipse JDT中的增量式编译器（ECJ）
+	后端运行期编译器（JIT编译器，just in time compiler）：把字节码转变成机器码的过程。
+		Hotspot vm的c1、c2编译器
+	静态提前编译器（AOT编译器，ahead of time compiler）：把*.java文件转变成机器码的过程。
+		GNU compiler for the java（GCJ）、excelsior JET。
+	
+	javac编译器	
+		编译过程
+			1.解析与填充符号表过程
+				词法分析：将源代码的字符流转变为标记（Token）集合
+				语法分析：根据Token序列来构造抽象语法树的过程。
+					抽象语法树（AST,abstract syntax tree）：是一种描述程序代码语法结构的树形表示方式，
+						语法树的每一个节点都代表着程序代码中的一个语法结构（construct），
+						例如包、类型、修饰符、运算符、接口、返回值甚至连代码注释等都可以是一个语法结构。
+				填充符号表：
+					符号表（symbol table）：是一组符号地址和符号信息构成的表格，读者可以把它想象成哈希表中K-V值对的形式。
+						符号表中所登记的信息在编译的不同阶段都要用到。
+					在语义分析中，符号表所登记的内容将用于语义检查和产生中间代码。
+					在目标代码生成阶段，当对符号名进行地址分配时，符号表是地址分配的依据。
+			2.插入式注解处理器的注解处理过程
+			3.语义分析与字节码生成过程
+				语义分析主要任务是对结构上正确的源程序进行上下文有关性质的审查。
+				1.标注检查
+				2.数据及控制流分析
+				3.解语法糖
+					泛型与类型擦除
+						java语言中的泛型只在程序源码中存在，在编译后的字节码文件中，就已经被替换为原来的原生类型（Raw Type，也称为裸类型），并且在相应的地方插入了强制转型代码。
+					自动装箱、拆箱与遍历循环
+					条件编译
+						根据布尔常量值的真假，编译器将会把分支中不成立的代码块消除掉。
+					内部类、枚举类、断言语句、对枚举和字符串的switch支持、在try语句中定义和关闭资源等。
+				4.字节码生成
+	实战：注解处理器		
+
+第十一章：晚期（运行期）优化
+	解释器与编译器	
+		解释器
+			省去编译时间立即执行
+		编译器
+			把代码编译成本地代码，获得更高的执行效率
+			Hotspot虚拟机中的编译器Client Compiler和Server Compiler   -client或者-server指定模式
+		解释器与编译器搭配使用称为“混合模式”（mixed mode）	
+		-Xint强制使用“解释模式”（interpreted mode）
+		-Xcomp强制使用“编译模式”（compiled mode）
+		-version显示		
+		
+		分层编译（tiered compilation）的编译层次：
+			第0层：程序解释执行，解释器不开启性能监控功能（profiling），可触发第1层编译。
+			第1层：也称C1编译，将字节码编译为本地代码，进行简单可靠的优化，如有必要将加入性能监控的逻辑。
+			第2层（或2层以上）：也称为C2编译，也是将字节码编译为本地代码，但是会启用一些编译耗时较长的优化，甚至会根据性能监控信息进行一些不可靠的激进优化。
+		Client Compiler获取更高的编译速度，Server Compiler获取更好的编译质量。
+	编译对象与触发条件
+		热点代码：
+			被多次调用的方法
+			被多次执行的循环体	
+		热点探测（hot spot detection）
+			1.基于采样热点探测（sample based hot spot detection）
+			2.基于计数器热点探测（counter based hot spot detection）
+				方法调用计数器（invocation counter） --XX:CompileThreshold设定
+					统计一段时间内的方法被调用的次数。
+					client模式下1500次
+					server模式下10000次
+					热度衰减（counter decay）
+						--XX:-UseCounterDecay		关闭热度衰减
+						--XX:CounterHalfLifeTime	设置半衰减周期时间，单位秒
+				回边计数器（back edge counter）
+					统计一个方法中循环体代码执行的次数。
+					栈上替换（on stack replacement，OSR）
+					--XX:OnStackReplacePercentage
+	编译过程
+		--XX:-BackgroundCompilation禁止后台编译		
+		高级中间代码表示（High-Level Intermediate Representation，HIR）
+		低级中间代码表示（Low-Level Intermediate Representation，LIR）
+	查看与分析即时编译结果
+		--XX:+PrintCompilation
+		--XX:+PrintInlining 方法内联信息
+		
+		虚拟机提供了反汇编接口
+		--XX:+PrintAssembly 打印反汇编代码
+		--XX:+PrintOptoAssembly(用于server vm)
+		--XX:+PrintLIR(用于client vm)
+		
+		--XX:+PrintCFGToFile（client compiler）
+		--XX:+PrintIdealGraphFile（server compiler）
+		用于令虚拟机将编译过程中各个阶段的数据输出到文件中使用java Hotspot client compiler visualizer或者ideal graph visualizer打开这些文件。
+	编译优化技术	
+		1.语言无关的经典优化技术之一：公共子表达式消除
+			如果一个表达式E已经被计算过了，并且从先前的计算到现在E中所有变量的值都没有发生变化，那么E的这次出现就成为了公共子表达式。
+		2.语言相关的经典优化技术之一：数组范围检查消除	
+		3.最重要的优化技术之一：方法内联
+			“类型继承关系分析”（class hierarchy analysis，CHA）的技术
+		4.最前沿的优化技术：逃逸分析
+			-XX:+DoEscapeAnalysis 手动开启逃逸分析
+			-XX:+PrintEscapeAnalysis 查看分析结果
+			栈上分配（stack allocation）
+			同步消除（synchronization elimination）
+				-XX:+EliminateLocks 开启同步消除
+			标量替换（scalar replacement）
+				-XX:+EliminateAllocations 开启标量替换
+				-XX:+PrintEliminateAllocations 查看标量替换
+	java与c/c++编译器对比
+		
+第五章：高效并发
+第十二章：java内存模型与线程	
+	硬件的效率与一致性
+	java内存模型
+		主流程序语言（如C/C++）直接使用物理硬件（或者说操作系统的内存模型）。--因此导致在不同平台上内存模型的差异，导致程序在一套平台上运行正常在另外一套平台上出错。
+		
+		主内存和工作内存
+			java内存模型规定了所有的变量都存储在主内存（main memory）中。
+			每条线程还有自己的工作内存（working memory），线程工作内存中保存了被该线程使用到的变量的主内存副本拷贝，线程对变量的所有操作（读取、赋值等）都必须在工作内存中进行，
+			而不能直接读写主内存中的变量。不同的线程之间也无法直接访问对方工作内存中的变量，线程间变量值的传递均需要通过主内存来完成。
+		内存交互操作
+			java内存模型中定义的八种操作：
+				1.lock（锁定）：作用于主内存
+				2.unlock（解锁）：作用于主内存
+				3.read（读取）：作用于主内存
+				4.load（载入）：作用于工作内存
+				5.use（使用）：作用于工作内存
+				6.assign（赋值）：作用于工作内存
+				7.store（存储）：作用于工作内存
+				8.write（写入）：作用于主内存
+		对于volatile型变量的特殊规则
+			volatile变量只能保证可见性
+			禁止指令重排优化
+				因为它需要在本地代码中插入许多内存屏障（memory barrier或者memory fence）指令来保证处理器不发生乱序执行。
+		对于long和double型变量的特殊规则
+			64位数据类型（long和double）的非原子性协定
+			目前各种平台商用虚拟机几乎选择把64位数据的读写操作作为原子操作来对待。
+		原子性、可见性和有序性
+			原子性：
+				read（读取）、load（载入）、use（使用）、assign（赋值）、store（存储）、write（写入）操作具备原子性
+				synchronized关键字--同步块
+			可见性：指当前线程修改了共享变量值，其他线程能够立即得知这个修改。
+				volatile关键字
+				synchronized
+				final：被final修饰的字段在构造器中一旦初始化完成，并且构造器没有把“this”的引用传递出去（this引用逃逸是一件很危险的事情，其他线程有可能通过这个引用访问到
+						“初始化了一半”的对象），那么在其他线程中就能看见final字段的值。
+			有序性：volatile、synchronized保证线程有序性
+				“线程内表现为串行的语义":指在本线程内观察，所有的操作都是有序的。
+				“指令重排”现象与“工作内存与主内存同步延迟”现象：指如果在一个线程中观察另一个线程，所有操作都是无序的。
+		先行发生原则：时间上的先后顺序与先行发生原则之间基本上没有太大的关系，所以我们衡量并发安全问题的时候不要受到时间顺序的干扰，一切必须以先行发生原则为准。
+			程序次序规则（program order rule）：在一个线程内，按照程序代码顺序，书写在前面的操作先行发生于书写在后面的操作，
+											准确的说应该是控制顺序流顺序而不是程序代码顺序，因为要考虑分支、循环等结构。
+			管程锁定规则（monitor lock rule）：一个unlock操作先行发生于后面对于同一个锁的lock操作，这里必须强调的是同一个锁，
+											而“后面”是指时间上的先后顺序。
+			volatile变量规则（volatile variable rule）：对于一个volatile变量的写操作先行发生于后面对于这个变量的读操作，
+											这里的“后面”同样指时间上的先后顺序。
+			线程启动规则（thread start rule）：thread对象的start()方法先行发生于此线程的每一个动作。
+			线程终止规则（thread terminaltion rule）：线程中所有操作都先行发生于此线程的终止检测，我们可以通过Thread.join()方法结束、
+											Thread.isAlive()的返回值等手段检测到线程已经终止。
+			线程中断规则（thread interruption rule）：对线程interrupt()方法的调用先行发生于被中断线程的代码检测到中断事件的发生，
+											可以通过Thread.interrupted()方法检测到是否有中断发生。
+			对象终结规则（finalize rule）：一个对象的初始化完成（构造函数执行结束）先行发生于它的finalize()方法的开始。
+			传递性（transitivity）：如果操作A先行发生于操作B，操作B先行发生于操作C，那么可以得出操作A先行发生于操作C。
+	java与线程
+		线程的实现
+			1.使用内核线程实现
+			2.使用用户线程实现
+			3.混合实现
+			4.java线程的实现
+		java线程调度
+			协同式线程调度（cooperative threads-scheduling）
+			抢占式线程调度（preemptive threads-scheduling）--java使用
+		状态转换
+			新建（new）
+			运行（runable）
+			无期限等待（waiting）
+			期限等待（timed waiting）
+			阻塞（blocked）
+			结束（terminated）
+第十三章：线程安全与锁优化
+	程序安全	
+		java语言中的线程安全	
+			1.不可变的对象一定是线程安全的。
+			2.绝对线程安全
+			3.相对线程安全
+			4.线程兼容
+			5.线程对立
+		线程安全的实现方法
+			1.互斥同步
+				synchronized关键字经过编译，会在同步块的前后分别形成monitorenter和monitorexit这两个字节码指令，
+				这两个字节码都需要一个reference类型的参数来指明要锁定和解锁的对象。如果没有指定了对象参数，那就是这个对象的reference；
+				如果没有指定，就是synchronized修饰的实例方法还是类方法，去取对应的对象实例或Class对象作为锁对象。
+				
+				重入锁（ReentrantLock）与synchronized相比增加了一些高级功能：
+					1.等待可中断：当持有锁的线程长期不释放锁的时候，正在等待的线程可以选择放弃等待，改为处理其他事情。
+					2.公平锁：指多个线程等待同一个锁时，必须按照申请锁的时间顺序依次获得锁。
+					3.锁绑定多个条件：指ReentrantLock对象可以同时绑定多个condition对象。
+			2.非阻塞同步
+				硬件保证一个从语义上看起来需要多次的操作行为只通过一条处理器指令就能完成：
+					测试并设置（test-and-set）
+					获取并增加（fetch-and-increase）
+					交换（swap）
+					比较并交换（compare-and-swap，CAS）
+						unsafe类的compareAndSwapInt()、compareAndSwapLong()
+					加载链接/条件存储（load-linked/store-conditional，LL/SC）
+			3.无同步方案
+				可重入代码
+				线程本地存储
+					Threadlocal类：当使用ThreadLocal维护变量时，ThreadLocal为每个使用该变量的线程提供独立的变量副本，
+							所以每一个线程都可以独立地改变自己的副本，而不会影响其它线程所对应的副本。
+					ThreadLocalMap是ThreadLocal内部类，由ThreadLocal创建，Thread有ThreadLocal.ThreadLocalMap类型的属性。
+					Synchronized用于线程间的数据共享，而ThreadLocal则用于线程间的数据隔离。
+				
+					Spring使用ThreadLocal解决线程安全问题我们知道在一般情况下，只有无状态的Bean才可以在多线程环境下共享，
+					在Spring中，绝大部分Bean都可以声明为singleton作用域。
+					就是因为Spring对一些Bean（如RequestContextHolder、TransactionSynchronizationManager、LocaleContextHolder等）
+					中非线程安全状态采用ThreadLocal进行处理，让它们也成为线程安全的状态，因为有状态的Bean就可以在多线程中共享了。
+
+					ThreadLocalMap是ThreadLocal类的一个静态内部类，它实现了键值对的设置和获取（对比Map对象来理解），
+					每个线程中都有一个独立的ThreadLocalMap副本，它所存储的值，只能被当前线程读取和修改。
+					ThreadLocal类通过操作每一个线程特有的ThreadLocalMap副本，从而实现了变量访问在不同线程中的隔离。
+					因为每个线程的变量都是自己特有的，完全不会有并发错误。还有一点就是，
+					ThreadLocalMap存储的键值对中的键是this对象指向的ThreadLocal对象，而值就是你所设置的对象了。
+	锁优化
+		自旋锁与自适应自旋
+			自旋锁：线程执行一个忙循环，看看持有锁的线程是否很快就会释放锁。
+			-XX:UseSpinning开启		自旋次数默认是10次，-XX:PreBlockSpin更改
+			自适应自旋锁：自旋时间不再固定，而是根据前一次在同一个锁上自旋时间及锁的拥有者的状态来决定。
+		锁消除
+			虚拟机会根据被检测到不可能存在共享数据竞争的锁进行消除。--判断依据源于逃逸分析的数据支持。		
+		锁粗化
+			频繁的进行互斥同步操作会导致不必要的性能损耗。		
+		轻量级锁
+			轻量级锁：在无竞争的情况下使用CAS操作去消除同步使用的互斥量
+		偏向锁	
+			偏向锁：在无竞争的情况下把整个同步都消除掉，连CAS操作都不做了		
+				
+第十四：附录				
+				
+				
+				
+				
+				
+				
+				
+				
+				
+		
+		
