@@ -1,0 +1,137 @@
+spring-boot-starter-web 依赖，包括了 Tomcat web 服务器和 Spring Boot 本身。
+
+在根目录下输入 mvn spring-boot:run 以启动应用
+
+
+创建可执行jar
+    要创建可执行 jar，我们需要将 spring-boot-maven-plugin 添加到 pom.xml 文件中。
+    保存 pom.xml 并在命令行中运行 mvn package
+    要查看里面的内容，可以使用 jar tvf
+    命令运行java -jar
+
+    在运行打包应用程序时开启远程调试支持。该功能允许您将调试器附加到打包的应用中。
+    java -Xdebug -Xrunjdwp:server=y,transport=dt_socket,address=8000,suspend=n -jar target/myapplication-0.0.1-SNAPSHOT.jar
+
+
+表 13.1、Spring Boot 应用类 Starter
+名称	描述	POM
+spring-boot-starter	核心 starter，包含自动配置支持、日志和 YAML	Pom
+spring-boot-starter-activemq	提供 JMS 消息支持，使用 Apache ActiveMQ	Pom
+spring-boot-starter-amqp	提供 Spring AMQP 与 Rabbit MQ 支持	Pom
+spring-boot-starter-aop	提供 Spring AOP 与 AspectJ 面向切面编程支持	Pom
+spring-boot-starter-artemis	提供 JMS 消息服务支持，使用 Apache Artemis	Pom
+spring-boot-starter-batch	提供 Spring Batch 支持	Pom
+spring-boot-starter-cache	提供 Spring Framework 缓存支持	Pom
+spring-boot-starter-cloud-connectors	使用 Spring Cloud Connectors 简单连接到类似 Cloud Foundry 和 Heroku 等云平台	Pom
+spring-boot-starter-data-cassandra	提供对 Cassandra 分布式数据库和 Spring Data Cassandra 的支持	Pom
+spring-boot-starter-data-cassandra-reactive	提供对 Cassandra 分布式数据库和 Spring Data Cassandra Reactive 的支持	Pom
+spring-boot-starter-data-couchbase	提供对 Couchbase 面向文档数据库和 Spring Data Couchbase 的支持	Pom
+spring-boot-starter-data-couchbase-reactive	提供对 Couchbase 面向文档数据库和 Spring Data Couchbase Reactive 的支持	Pom
+spring-boot-starter-data-elasticsearch	提供对 Elasticseach 搜索与分析引擎和 Spring Data Elasticsearch 的支持	Pom
+spring-boot-starter-data-jpa	提供 Spring Data JPA 与 Hibernate 的支持	Pom
+spring-boot-starter-data-ldap	提供对 Spring Data LDAP 的支持	Pom
+spring-boot-starter-data-mongodb	提供对 MongoDB 面向文档数据库和 Spring Data MongoDB 的支持	Pom
+spring-boot-starter-data-mongodb-reactive	提供对 MongoDB 面向文档数据库和 Spring Data MongoDB Reactive 的支持	Pom
+spring-boot-starter-data-neo4j	提供对 Neo4j 图数据库与 SPring Data Neo4j 的支持	Pom
+spring-boot-starter-data-redis	提供对 Redis 键值数据存储、Spring Data Redis 和 Lettuce 客户端的支持	Pom
+spring-boot-starter-data-redis-reactive	提供对 Redis 键值数据存储、Spring Data Redis Reactive 和 Lettuce 客户端的支持	Pom
+spring-boot-starter-data-rest	提供使用 Spring Data REST 通过 REST 暴露 Spring Data 资源库的支持	Pom
+spring-boot-starter-data-solr	提供对 Apache Solr 搜索平台与 Spring Data Solr 的支持	Pom
+spring-boot-starter-freemarker	提供使用 Freemakrer 视图构建 MVC web 应用的支持	Pom
+spring-boot-starter-groovy-templates	提供使用 Groovy 模板视图构建 MVC web 应用的支持	Pom
+spring-boot-starter-hateoas	提供使用 Spring MVC 与Spring HATEOAS 构建基于超媒体的 RESTful web 应用的支持	Pom
+spring-boot-starter-integration	提供对 Spring Integration 的支持	Pom
+spring-boot-starter-jdbc	提供 JDBC 与 Tomcat JDBC 连接池的支持	Pom
+spring-boot-starter-jersey	提供对使用 JAX-RS 与 Jersey 构建 RESTful web 应用的支持。spring-boot-starter-web 的替代方案	Pom
+spring-boot-starter-jooq	提供对使用 JOOQ 访问 SQL 数据库的支持。spring-boot-starter-data-jpa 或 spring-boot-starter-jdbc 的替代方案	Pom
+spring-boot-starter-json	提供了读写 json 的支持	Pom
+spring-boot-starter-jta-atomikos	提供 Atomikos JTA 事务支持	Pom
+spring-boot-starter-jta-bitronix	提供 Bitronix JTA 事务支持	Pom
+spring-boot-starter-jta-narayana	提供 Narayana JTA 支持	Pom
+spring-boot-starter-mail	提供使用　Java Mail 与 Spring Framework 的邮件发送支持	Pom
+spring-boot-starter-mustache	提供使用 Mustache 视图构建 web 应用的支持	Pom
+spring-boot-starter-quartz	Quartz 支持	Pom
+spring-boot-starter-security	Spring Security 支持	Pom
+spring-boot-starter-test	提供包含了 JUnit、Hamcrest 与 Mockito 类库的 Spring Boot 单元测试支持	Pom
+spring-boot-starter-thymeleaf	提供使用 Thymeleaf 视图构建 MVC web 应用的支持	pom
+spring-boot-starter-validation	提供 Hibernate Validator 与 Java Bean Validation 的支持	Pom
+spring-boot-starter-web	提供使用 Spring MVC 构建 web（包含 RESTful）应用的支持，使用 Tomcat 作为默认嵌入式容器	Pom
+spring-boot-starter-web-services	Spring Web Services 支持	Pom
+spring-boot-starter-webflux	提供使用 Spring Framework 的 Reactive Web 支持构建 WebFlux 应用的支持	Pom
+spring-boot-starter-websocket	提供使用 Spring Framework 的 WebSocket 支持构建 WebSocket 应用的支持	Pom
+
+
+表 13.2、Spring Boot 生产类 starter
+名称	描述	POM
+spring-boot-starter-actuator	Spring Boot 的 Actuator 支持，其提供了生产就绪功能，帮助您监控和管理应用	Pom
+
+
+表 13.3、Spring Boot 技术类 starter
+名称	描述	POM
+spring-boot-starter-jetty	使用 Jetty 作为嵌入式 servlet 容器。可代替 spring-boot-starter-tomcat	Pom
+spring-boot-starter-log4j2	使用 Log4j2 作为日志组件。可代替 spring-boot-starter-logging	Pom
+spring-boot-starter-logging	使用 Logback 作为日志组件，此 starter 为默认的日志 starter	Pom
+spring-boot-starter-reactor-netty	使用 Reactor Netty 作为内嵌响应式 HTTP 服务器	Pom
+spring-boot-starter-tomcat	使用 Tomcat 作为嵌入式 servlet 容器，此为 spring-boot-starter-web 默认的 servlet 容器 starter	Pom
+spring-boot-starter-undertow	使用 Undertow 作为嵌入式 servlet 容器，可代替 spring-boot-starter-tomcat	Pom
+
+
+包结构
+com
+ +- example
+     +- myapplication
+         +- Application.java
+         |
+         +- customer
+         |   +- Customer.java
+         |   +- CustomerController.java
+         |   +- CustomerService.java
+         |   +- CustomerRepository.java
+         |
+         +- order
+             +- Order.java
+             +- OrderController.java
+             +- OrderService.java
+             +- OrderRepository.java
+
+
+配置类
+    Spring Boot 支持基于 Java 的配置。虽然可以在 SpringApplication 中使用 XML 配置源，但我们通常建议主配置源为 @Configuration 类。通常，一个很好的选择是将定义了 main 方法的类作为 @Configuration。
+
+    导入配置类
+        你不需要把所有的 @Configuration 放在一个类中。@Import 注解可用于导入其他配置类。或者，您可以使用 @ComponentScan 自动扫描所有 Spring 组件，包括 @Configuration 类。
+    导入xml配置
+       如果您一定要使用基于 XML 的配置，我们建议您仍然使用 @Configuration 类。您可以使用 @ImportResource 注解来加载 XML 配置文件。
+
+自动配置
+    您需要通过将 @EnableAutoConfiguration 或者 @SpringBootApplication 注解添加到其中一个 @Configuration 类之上以启用自动配置。
+    您应该仅添加一个 @EnableAutoConfiguration 注解。我们通常建议您将其添加到主 @Configuration 类中。
+
+    如果您需要了解当前正在应用的自动配置，以及为什么使用，请使用 --debug 开关启动应用。这样做可以为核心 logger 启用调试日志，并记录到控制台。
+
+    如果您发现在正在使用不需要的自动配置类，可以通过使用 @EnableAutoConfiguration 的 exclude 属性来禁用它们。
+    @EnableAutoConfiguration(exclude={DataSourceAutoConfiguration.class})
+
+
+很多 Spring Boot 开发者总是使用 @Configuration、@EnableAutoConfiguration 和 @ComponentScan 注解标记在主类上。
+由于这些注解经常一起使用（特别是如果您遵循上述的最佳实践）。Spring Boot 提供了一个更方便的 @SpringBootApplication 注解
+可用来替代这个组合。
+
+
+
+开发者工具
+    Spring Boot 包含了一套工具，可以使应用开发体验更加愉快。spring-boot-devtools 模块可包含在任何项目中，以提供额外的开发时（development-time）功能。
+    要启用 devtools 支持，只需要将模块依赖添加到您的构建配置中即可：
+
+
+SpringApplication 从以下位置的 application.properties 文件中加载属性（properties），并将它们添加到 Spring Environment 中：
+    当前目录的 /config 子目录
+    当前目录
+    classpath 上的 /config 包
+    classpath 根路径
+    列表按序号优先级排序，序号越小，优先级越高。
+
+
+28.1.11、错误处理
+
+
