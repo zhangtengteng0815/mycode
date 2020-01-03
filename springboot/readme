@@ -131,9 +131,9 @@ SpringApplication 从以下位置的 application.properties 文件中加载属�
     classpath 根路径
     列表按序号优先级排序，序号越小，优先级越高。
 
+ryu没看完
 
-
-52 启用生产就绪功能
+springboot 52 启用生产就绪功能
 
 
 
