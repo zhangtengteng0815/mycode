@@ -1,0 +1,18 @@
+Hadoop权威指南  ---- doug cutting
+第一章 初始 Hadoop
+    Hadoop的子项目
+        core
+            一系类分布式文件系统和通用I/O的组件和接口（序列化、java rpc和持久化数据结构）
+        avro
+            一种提供高效、跨语言rpc的数据序列系统，持久化数据存储
+        MapReduce
+            分布式数据处理模块和执行环境，运行大型商业集群
+        HDFS
+            分布式文件系统，运行于大型商业机集群
+        pig
+            一种数据流语言和运行环境，用以检索非常大的数据集。pig运行在MapReduce和HDFS的集群上
+        hbase
+            一个分布式、列存储数据库。使用HDFS作为底层存储 ，同时支持MapReduce的批量式计算和点查询
+        zookeeper
+            分布式、高可用的协调服务。
+第二章 MapReduce简介
